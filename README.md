@@ -22,6 +22,16 @@ Läuft auf: `http://localhost:5000`
 2. `docker-compose.yml` einfügen
 3. Deploy
 
+## Git Repository in Portainer
+
+1. Stacks → Add stack
+2. Name: esxi-vm-launcher
+3. Build method: `Repository**
+4. Repository URL: https://github.com/carstenschroeder/esxi-vm-launcher
+5. Repository reference: refs/heads/main
+6. Compose path: docker-compose.yml
+7. Deploy the stack
+
 ## Manuelle Installation
 
 ```bash
