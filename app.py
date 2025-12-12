@@ -1,15 +1,28 @@
-# app.py
-from flask import Flask, jsonify, request, send_from_directory, session
+"""
+ESXi VM Launcher
+Eine Web-Anwendung zum Verwalten von VMs auf einem ESXi Server
+"""
+
+import os
+from flask import Flask, render_template, jsonify, request, session
 from pyVim.connect import SmartConnect, Disconnect
 from pyVmomi import vim
 import ssl
-import secrets
+import requests
 
-app = Flask(__name__, static_folder='static')
-app.secret_key = secrets.token_hex(32)  # Für Session-Management
+app = Flask(__name__, static_folder='static', static_url_path='')
+
+# SECRET_KEY: Aus Umgebungsvariable (Docker) oder generiert (lokal)
+app.secret_key = os.environ.get('SECRET_KEY', os.urandom(24))
+
+# Session-Konfiguration
+app.config['SESSION_COOKIE_SECURE'] = False  # True nur bei HTTPS
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+app.config['PERMANENT_SESSION_LIFETIME'] = 3600  # 1 Stunde
 
 def get_si(host, user, password):
-    """Verbindung zum ESXi herstellen"""
+    """Verbindung zum ESXi Server herstellen"""
     context = ssl._create_unverified_context()
     si = SmartConnect(
         host=host,
@@ -63,53 +76,52 @@ def get_all_vms(host, user, password):
 
 @app.route('/')
 def index():
-    return send_from_directory('static', 'index.html')
+    """Hauptseite"""
+    return app.send_static_file('index.html')
 
 @app.route('/api/login', methods=['POST'])
 def login():
-    """Login und Credentials in Session speichern"""
+    """Login-Endpoint"""
+    data = request.json
+    host = data.get('host')
+    user = data.get('user')
+    password = data.get('password')
+    
     try:
-        data = request.json
-        host = data.get('host')
-        user = data.get('user')
-        password = data.get('password')
-        
-        if not all([host, user, password]):
-            return jsonify({'success': False, 'error': 'Alle Felder müssen ausgefüllt sein'}), 400
-        
         # Verbindung testen
-        try:
-            si = get_si(host, user, password)
-            Disconnect(si)
-        except Exception as e:
-            return jsonify({'success': False, 'error': f'Verbindung fehlgeschlagen: {str(e)}'}), 401
+        si = get_si(host, user, password)
+        Disconnect(si)
         
-        # Credentials in Session speichern
+        # Session speichern
+        session['logged_in'] = True
         session['host'] = host
         session['user'] = user
         session['password'] = password
-        session['logged_in'] = True
+        session.permanent = True
         
-        return jsonify({'success': True, 'message': 'Login erfolgreich'})
+        return jsonify({'success': True})
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return jsonify({'success': False, 'error': str(e)}), 401
 
 @app.route('/api/logout', methods=['POST'])
 def logout():
-    """Logout und Session löschen"""
+    """Logout-Endpoint"""
     session.clear()
-    return jsonify({'success': True, 'message': 'Logout erfolgreich'})
+    return jsonify({'success': True})
 
 @app.route('/api/check-session', methods=['GET'])
 def check_session():
-    """Prüfen ob User eingeloggt ist"""
+    """Session-Status prüfen"""
     if session.get('logged_in'):
-        return jsonify({'success': True, 'logged_in': True, 'host': session.get('host')})
-    return jsonify({'success': True, 'logged_in': False})
+        return jsonify({
+            'logged_in': True,
+            'host': session.get('host')
+        })
+    return jsonify({'logged_in': False})
 
 @app.route('/api/vms', methods=['GET'])
 def list_vms():
-    """Liste aller VMs zurückgeben"""
+    """Liste aller VMs"""
     if not session.get('logged_in'):
         return jsonify({'success': False, 'error': 'Nicht eingeloggt'}), 401
     
@@ -208,18 +220,44 @@ def shutdown_vm(moid):
             return jsonify({'success': True, 'message': 'VM wird gestoppt (VMware Tools nicht verfügbar)'})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
-        
+
 @app.route('/api/vm/<moid>/vmrc', methods=['GET'])
 def get_vmrc_link(moid):
-    """VMRC-Link generieren"""
+    """VMRC-Link für VM generieren"""
     if not session.get('logged_in'):
         return jsonify({'success': False, 'error': 'Nicht eingeloggt'}), 401
     
-    host = session.get('host')
-    user = session.get('user')
-    # Format: vmrc://username@esxi-host/?moid=vm-123
-    vmrc_url = f"vmrc://{user}@{host}/?moid={moid}"
-    return jsonify({'success': True, 'vmrc_url': vmrc_url})
+    try:
+        host = session.get('host')
+        user = session.get('user')
+        password = session.get('password')
+        
+        si = get_si(host, user, password)
+        content = si.RetrieveContent()
+        
+        # VM finden
+        container = content.viewManager.CreateContainerView(
+            content.rootFolder, [vim.VirtualMachine], True
+        )
+        vm = None
+        for v in container.view:
+            if v._moId == moid:
+                vm = v
+                break
+        container.Destroy()
+        
+        if not vm:
+            Disconnect(si)
+            return jsonify({'success': False, 'error': 'VM nicht gefunden'}), 404
+        
+        # VMRC-URL generieren
+        vmrc_url = f"vmrc://clone:{user}@{host}/?moid={moid}"
+        
+        Disconnect(si)
+        return jsonify({'success': True, 'vmrc_url': vmrc_url})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=False)
+    print("🚀 ESXi VM Launcher startet auf http://localhost:5000")
+    app.run(debug=True, host='0.0.0.0', port=5000)
