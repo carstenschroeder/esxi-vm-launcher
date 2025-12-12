@@ -1,0 +1,684 @@
+<!-- static/index.html -->
+<!DOCTYPE html>
+<html lang="de">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ESXi VM Launcher</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f7fa;
+            min-height: 100vh;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            background: white;
+            min-height: 100vh;
+        }
+
+        .login-container {
+            max-width: 420px;
+            margin: 100px auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            padding: 40px;
+            border: 1px solid #e1e4e8;
+        }
+
+        h1 {
+            color: #1a1a1a;
+            margin: 0;
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        h2 {
+            color: #1a1a1a;
+            margin-bottom: 30px;
+            text-align: center;
+            font-size: 22px;
+            font-weight: 600;
+        }
+
+        .form-group {
+            margin-bottom: 18px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 6px;
+            color: #24292e;
+            font-weight: 500;
+            font-size: 13px;
+        }
+
+        input[type="text"],
+        input[type="password"] {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #d1d5da;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            background: #fafbfc;
+        }
+
+        input[type="text"]:focus,
+        input[type="password"]:focus {
+            outline: none;
+            border-color: #0366d6;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(3, 102, 214, 0.1);
+        }
+
+        .btn-login {
+            width: 100%;
+            background: #0366d6;
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            margin-top: 10px;
+            transition: background 0.2s;
+        }
+
+        .btn-login:hover {
+            background: #0256c7;
+        }
+
+        .btn-login:disabled {
+            background: #94a3b8;
+            cursor: not-allowed;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 24px;
+            background: white;
+            border-bottom: 1px solid #e1e4e8;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .server-info {
+            background: #f6f8fa;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            color: #586069;
+            border: 1px solid #e1e4e8;
+        }
+
+        .refresh-btn {
+            background: #fafbfc;
+            color: #24292e;
+            border: 1px solid #d1d5da;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+
+        .refresh-btn:hover {
+            background: #f3f4f6;
+            border-color: #c1c5ca;
+        }
+
+        .btn-logout {
+            background: #fafbfc;
+            color: #d73a49;
+            border: 1px solid #d1d5da;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+
+        .btn-logout:hover {
+            background: #f3f4f6;
+            border-color: #c1c5ca;
+        }
+
+        .content {
+            padding: 24px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border: 1px solid #e1e4e8;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        th,
+        td {
+            padding: 10px 16px;
+            text-align: left;
+            border-bottom: 1px solid #e1e4e8;
+            font-size: 13px;
+        }
+
+        th {
+            background: #f6f8fa;
+            font-weight: 600;
+            color: #24292e;
+            text-transform: uppercase;
+            font-size: 11px;
+            letter-spacing: 0.5px;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        tr:hover {
+            background: #f6f8fa;
+        }
+
+        .vm-name {
+            color: #0366d6;
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        .status {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+
+        .status::before {
+            content: '';
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+        }
+
+        .status.on {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .status.on::before {
+            background: #22c55e;
+        }
+
+        .status.off {
+            background: #f3f4f6;
+            color: #6b7280;
+        }
+
+        .status.off::before {
+            background: #9ca3af;
+        }
+
+        .btn {
+            padding: 6px 12px;
+            border: 1px solid #d1d5da;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 500;
+            transition: all 0.2s;
+            display: inline-block;
+        }
+
+        .btn-start {
+            background: #2da44e;
+            color: white;
+            border-color: #2da44e;
+            margin-bottom: 4px;
+        }
+
+        .btn-start:hover {
+            background: #2c974b;
+        }
+
+        .btn-start:disabled {
+            background: #94a3b8;
+            border-color: #94a3b8;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        .btn-shutdown {
+            background: #fb8500;
+            color: white;
+            border-color: #fb8500;
+            display: block;
+            width: 100%;
+        }
+
+        .btn-shutdown:hover {
+            background: #dc7400;
+        }
+
+        .btn-shutdown:disabled {
+            background: #94a3b8;
+            border-color: #94a3b8;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        .btn-vmrc {
+            background: #0366d6;
+            color: white;
+            border-color: #0366d6;
+        }
+
+        .btn-vmrc:hover {
+            background: #0256c7;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 60px 20px;
+            color: #6b7280;
+            font-size: 14px;
+        }
+
+        .error {
+            background: #fef2f2;
+            color: #991b1b;
+            padding: 12px 16px;
+            border-radius: 6px;
+            margin-bottom: 16px;
+            font-size: 13px;
+            border: 1px solid #fecaca;
+        }
+
+        .info {
+            background: #eff6ff;
+            color: #1e40af;
+            padding: 12px 16px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            font-size: 12px;
+            border: 1px solid #bfdbfe;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .actions {
+            white-space: nowrap;
+        }
+
+        .actions-left {
+            display: inline-block;
+            vertical-align: top;
+            margin-right: 8px;
+        }
+
+        .actions-right {
+            display: inline-block;
+            vertical-align: top;
+        }
+
+        .spec-badge {
+            display: inline-block;
+            background: #f6f8fa;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            color: #586069;
+            margin-right: 6px;
+            font-weight: 500;
+        }
+
+        .ip-address {
+            color: #0969da;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Login Screen -->
+    <div id="login-screen" class="login-container">
+        <h2>🔐 ESXi Login</h2>
+        <div id="login-error-container"></div>
+        <form id="login-form" onsubmit="handleLogin(event)">
+            <div class="form-group">
+                <label for="host">ESXi Host (IP oder FQDN)</label>
+                <input type="text" id="host" name="host" value="192.168.0.40" required>
+            </div>
+            <div class="form-group">
+                <label for="user">Benutzername</label>
+                <input type="text" id="user" name="user" value="root" required>
+            </div>
+            <div class="form-group">
+                <label for="password">Passwort</label>
+                <input type="password" id="password" name="password" required>
+            </div>
+            <button type="submit" class="btn-login" id="login-btn">Anmelden</button>
+        </form>
+    </div>
+
+    <!-- Main App Screen -->
+    <div id="app-screen" class="container hidden">
+        <div class="header">
+            <div class="header-left">
+                <h1>ESXi VM Launcher</h1>
+                <div class="server-info" id="server-info"></div>
+            </div>
+            <div class="header-right">
+                <button class="refresh-btn" onclick="loadVMs()">🔄 Aktualisieren</button>
+                <button class="btn-logout" onclick="handleLogout()">Abmelden</button>
+            </div>
+        </div>
+
+        <div class="content">
+            <div class="info">
+                <strong>Hinweis:</strong> VMRC muss auf deinem System installiert sein.
+                Beim ersten Klick auf "Console" fragt dein Browser nach Erlaubnis für das vmrc:// Protokoll.
+            </div>
+
+            <div id="error-container"></div>
+            <div id="vm-list"></div>
+        </div>
+    </div>
+
+    <script>
+        // Beim Laden prüfen ob bereits eingeloggt
+        window.onload = async function () {
+            await checkSession();
+        };
+
+        async function checkSession() {
+            try {
+                const response = await fetch('/api/check-session');
+                const data = await response.json();
+
+                if (data.logged_in) {
+                    showAppScreen(data.host);
+                    loadVMs();
+                } else {
+                    showLoginScreen();
+                }
+            } catch (error) {
+                showLoginScreen();
+            }
+        }
+
+        function showLoginScreen() {
+            document.getElementById('login-screen').classList.remove('hidden');
+            document.getElementById('app-screen').classList.add('hidden');
+        }
+
+        function showAppScreen(host) {
+            document.getElementById('login-screen').classList.add('hidden');
+            document.getElementById('app-screen').classList.remove('hidden');
+            document.getElementById('server-info').textContent = `Server: ${host}`;
+        }
+
+        async function handleLogin(event) {
+            event.preventDefault();
+
+            const loginBtn = document.getElementById('login-btn');
+            const errorContainer = document.getElementById('login-error-container');
+            errorContainer.innerHTML = '';
+
+            const host = document.getElementById('host').value;
+            const user = document.getElementById('user').value;
+            const password = document.getElementById('password').value;
+
+            loginBtn.disabled = true;
+            loginBtn.textContent = 'Verbinde...';
+
+            try {
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ host, user, password })
+                });
+
+                const data = await response.json();
+
+                if (!data.success) {
+                    throw new Error(data.error);
+                }
+
+                showAppScreen(host);
+                loadVMs();
+
+            } catch (error) {
+                errorContainer.innerHTML = `<div class="error">Login fehlgeschlagen: ${error.message}</div>`;
+            } finally {
+                loginBtn.disabled = false;
+                loginBtn.textContent = 'Anmelden';
+            }
+        }
+
+        async function handleLogout() {
+            try {
+                await fetch('/api/logout', { method: 'POST' });
+                showLoginScreen();
+                document.getElementById('password').value = '';
+            } catch (error) {
+                alert(`Logout fehlgeschlagen: ${error.message}`);
+            }
+        }
+
+        async function loadVMs() {
+            const container = document.getElementById('vm-list');
+            const errorContainer = document.getElementById('error-container');
+            errorContainer.innerHTML = '';
+            container.innerHTML = '<div class="loading">Lade VMs...</div>';
+
+            try {
+                const response = await fetch('/api/vms');
+
+                if (response.status === 401) {
+                    showLoginScreen();
+                    return;
+                }
+
+                const data = await response.json();
+
+                if (!data.success) {
+                    throw new Error(data.error);
+                }
+
+                if (data.vms.length === 0) {
+                    container.innerHTML = '<div class="loading">Keine VMs gefunden</div>';
+                    return;
+                }
+
+                let html = `
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>VM Name</th>
+                                <th>Betriebssystem</th>
+                                <th style="width: 100px;">Ressourcen</th>
+                                <th style="width: 130px;">IP-Adresse</th>
+                                <th style="width: 100px;">Status</th>
+                                <th style="width: 220px;">Aktionen</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+
+                data.vms.forEach(vm => {
+                    const isRunning = vm.power_state === 'poweredOn';
+                    const statusClass = isRunning ? 'on' : 'off';
+                    const statusText = isRunning ? 'Running' : 'Stopped';
+
+                    html += `
+                        <tr>
+                            <td><span class="vm-name">${vm.name}</span></td>
+                            <td style="color: #586069;">${vm.guest_os}</td>
+                            <td>
+                                <span class="spec-badge">${vm.num_cpu} vCPU</span>
+                                <span class="spec-badge">${vm.memory_gb} GB</span>
+                            </td>
+                            <td><span class="ip-address">${vm.ip_address}</span></td>
+                            <td><span class="status ${statusClass}">${statusText}</span></td>
+                            <td class="actions">
+                                ${!isRunning ? `
+                                    <div class="actions-left">
+                                        <button class="btn btn-start" 
+                                                onclick="startAndOpenVMRC('${vm.moid}', '${vm.name}')">
+                                            ▶ Starten
+                                        </button>
+                                    </div>
+                                ` : `
+                                    <div class="actions-left">
+                                        <button class="btn btn-shutdown" onclick="shutdownVM('${vm.moid}', '${vm.name}')">⏻ Herunterfahren</button>
+                                    </div>
+                                    <div class="actions-right">
+                                        <button class="btn btn-vmrc" onclick="openVMRC('${vm.moid}')">Console</button>
+                                    </div>
+                                `}
+                            </td>
+                        </tr>
+                    `;
+                });
+
+                html += '</tbody></table>';
+                container.innerHTML = html;
+
+            } catch (error) {
+                errorContainer.innerHTML = `<div class="error">Fehler: ${error.message}</div>`;
+                container.innerHTML = '';
+            }
+        }
+
+        async function startAndOpenVMRC(moid, name) {
+            try {
+                // VM starten
+                const startResponse = await fetch(`/api/vm/${moid}/start`, {
+                    method: 'POST'
+                });
+
+                if (startResponse.status === 401) {
+                    showLoginScreen();
+                    return;
+                }
+
+                const startData = await startResponse.json();
+
+                if (!startData.success) {
+                    alert(`Fehler beim Starten: ${startData.error}`);
+                    return;
+                }
+
+                alert(`VM "${name}" wird gestartet. Warte 5 Sekunden, dann wird VMRC geöffnet...`);
+
+                // 5 Sekunden warten, damit VM hochfährt
+                await new Promise(resolve => setTimeout(resolve, 5000));
+
+                // VMRC öffnen
+                await openVMRC(moid);
+
+                // Liste aktualisieren
+                loadVMs();
+
+            } catch (error) {
+                alert(`Fehler: ${error.message}`);
+            }
+        }
+
+        async function shutdownVM(moid, name) {
+            if (!confirm(`VM "${name}" wirklich herunterfahren?`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/vm/${moid}/shutdown`, {
+                    method: 'POST'
+                });
+
+                if (response.status === 401) {
+                    showLoginScreen();
+                    return;
+                }
+
+                const data = await response.json();
+
+                if (!data.success) {
+                    alert(`Fehler beim Herunterfahren: ${data.error}`);
+                    return;
+                }
+
+                alert(`VM "${name}" wird heruntergefahren.`);
+
+                // Liste aktualisieren
+                setTimeout(() => loadVMs(), 2000);
+
+            } catch (error) {
+                alert(`Fehler: ${error.message}`);
+            }
+        }
+
+        async function openVMRC(moid) {
+            try {
+                const response = await fetch(`/api/vm/${moid}/vmrc`);
+
+                if (response.status === 401) {
+                    showLoginScreen();
+                    return;
+                }
+
+                const data = await response.json();
+
+                if (!data.success) {
+                    alert(`Fehler: ${data.error}`);
+                    return;
+                }
+
+                // VMRC-Link öffnen
+                window.location.href = data.vmrc_url;
+
+            } catch (error) {
+                alert(`Fehler beim Öffnen von VMRC: ${error.message}`);
+            }
+        }
+    </script>
+</body>
+
+</html>

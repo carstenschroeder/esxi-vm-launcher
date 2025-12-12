@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  esxi-vm-launcher:
+    build: .
+    container_name: esxi-vm-launcher
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_ENV=production
+      - TZ=Europe/Berlin
+    volumes:
+      # Optional: Für Logs
+      - ./logs:/app/logs
+    networks:
+      - esxi-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+networks:
+  esxi-network:
+    driver: bridge
