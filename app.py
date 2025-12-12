@@ -1,6 +1,6 @@
 """
 ESXi VM Launcher
-Eine Web-Anwendung zum Verwalten von VMs auf einem ESXi Server
+Eine Web-Anwendung zum Starten von VMs auf einem ESXi Server
 """
 
 import os
