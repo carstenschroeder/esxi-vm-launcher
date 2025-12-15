@@ -39,27 +39,37 @@ def get_all_vms(host, user, password):
     container = content.viewManager.CreateContainerView(
         content.rootFolder, [vim.VirtualMachine], True
     )
+    
+    autostart_vms = set()
+    for host_obj in content.viewManager.CreateContainerView(
+        content.rootFolder, [vim.HostSystem], True
+    ).view:
+        autostart_mgr = host_obj.configManager.autoStartManager
+        if autostart_mgr and autostart_mgr.config and autostart_mgr.config.powerInfo:
+            for info in autostart_mgr.config.powerInfo:
+                if info.startAction != 'none':
+                    autostart_vms.add(info.key._moId)
+    
     vms = []
     for vm in container.view:
-        # IP-Adresse ermitteln
         ip_address = 'N/A'
         if vm.guest and vm.guest.ipAddress:
             ip_address = vm.guest.ipAddress
         elif vm.guest and vm.guest.net:
             for nic in vm.guest.net:
                 if nic.ipAddress:
-                    # Erste IPv4-Adresse nehmen
                     for ip in nic.ipAddress:
-                        if ':' not in ip:  # IPv4 (keine IPv6)
+                        if ':' not in ip:
                             ip_address = ip
                             break
                 if ip_address != 'N/A':
                     break
         
-        # CPU und RAM
         num_cpu = vm.config.hardware.numCPU if vm.config else 0
         memory_mb = vm.config.hardware.memoryMB if vm.config else 0
         memory_gb = round(memory_mb / 1024, 1) if memory_mb > 0 else 0
+        
+        has_autostart = vm._moId in autostart_vms
         
         vms.append({
             'name': vm.name,
@@ -68,11 +78,12 @@ def get_all_vms(host, user, password):
             'guest_os': vm.config.guestFullName if vm.config else 'Unknown',
             'num_cpu': num_cpu,
             'memory_gb': memory_gb,
-            'ip_address': ip_address
+            'ip_address': ip_address,
+            'autostart': has_autostart
         })
     container.Destroy()
     Disconnect(si)
-    vms.sort(key=lambda x: x['name'].lower())
+    vms.sort(key=lambda x: (x['autostart'], x['name'].lower()))
     return vms
 
 @app.route('/')

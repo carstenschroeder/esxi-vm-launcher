@@ -363,6 +363,18 @@
             font-family: 'Courier New', monospace;
             font-size: 12px;
         }
+
+        .autostart-badge {
+            display: inline-block;
+            background: #dbeafe;
+            color: #1e40af;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 600;
+            margin-left: 8px;
+            text-transform: uppercase;
+        }
     </style>
 </head>
 
@@ -537,7 +549,7 @@
 
                     html += `
                         <tr>
-                            <td><span class="vm-name">${vm.name}</span></td>
+                            <td><span class="vm-name">${vm.name}</span>${vm.autostart ? '<span class="autostart-badge">Autostart</span>' : ''}</td>
                             <td style="color: #586069;">${vm.guest_os}</td>
                             <td>
                                 <span class="spec-badge">${vm.num_cpu} vCPU</span>
