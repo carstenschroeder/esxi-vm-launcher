@@ -72,6 +72,7 @@ def get_all_vms(host, user, password):
         })
     container.Destroy()
     Disconnect(si)
+    vms.sort(key=lambda x: x['name'].lower())
     return vms
 
 @app.route('/')
