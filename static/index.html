@@ -420,6 +420,8 @@
     </div>
 
     <script>
+        let autoRefreshInterval = null;
+
         // Beim Laden prüfen ob bereits eingeloggt
         window.onload = async function () {
             await checkSession();
@@ -441,7 +443,24 @@
             }
         }
 
+        function startAutoRefresh() {
+            if (autoRefreshInterval) {
+                clearInterval(autoRefreshInterval);
+            }
+            autoRefreshInterval = setInterval(() => {
+                loadVMs();
+            }, 60000);
+        }
+
+        function stopAutoRefresh() {
+            if (autoRefreshInterval) {
+                clearInterval(autoRefreshInterval);
+                autoRefreshInterval = null;
+            }
+        }
+
         function showLoginScreen() {
+            stopAutoRefresh();
             document.getElementById('login-screen').classList.remove('hidden');
             document.getElementById('app-screen').classList.add('hidden');
         }
@@ -450,6 +469,7 @@
             document.getElementById('login-screen').classList.add('hidden');
             document.getElementById('app-screen').classList.remove('hidden');
             document.getElementById('server-info').textContent = `Server: ${host}`;
+            startAutoRefresh();
         }
 
         async function handleLogin(event) {
